@@ -1,4 +1,7 @@
 // map.js
+// Uses window.currentUser, window.db from firebaseConfig and auth
+// Saves apartments with default values for ratings, price, sq_ft, etc.
+
 let map;
 let placesService;
 let markers = [];
@@ -53,7 +56,7 @@ function displayApartments(apartments) {
     apartmentsList.appendChild(li);
   });
 
-  // If user is logged in and db is available, you can save apartments
+  // Save to Firestore if user is logged in
   if (window.currentUser && window.db) {
     saveApartmentsToUser(apartments);
   }
@@ -83,18 +86,24 @@ async function saveApartmentsToUser(apartments) {
       apartment.geometry.location.lat(), apartment.geometry.location.lng()
     );
 
-    await userApartmentsRef.doc(apartment.place_id).set({
+    // Default values for new fields
+    const defaultData = {
       name: apartment.name,
       distanceMiles: distanceMiles,
-      luxury: 'N/A',
-      amenities: 'N/A',
-      finalRating: 'N/A'
-    });
+      luxury: 0,
+      amenities: 0,
+      price: 0,
+      sq_ft: 0,
+      finalRating: 0,
+      price_per_sq_ft: 0
+    };
+
+    await userApartmentsRef.doc(apartment.place_id).set(defaultData);
   }
 }
 
 function distanceBetweenLocations(lat1, lon1, lat2, lon2) {
-  const R = 3958.8;
+  const R = 3958.8; // Radius of Earth in miles
   const dLat = toRad(lat2 - lat1);
   const dLon = toRad(lon2 - lon1);
   const lat1Rad = toRad(lat1);
@@ -110,3 +119,8 @@ function distanceBetweenLocations(lat1, lon1, lat2, lon2) {
 function toRad(value) {
   return value * Math.PI / 180;
 }
+
+// If you have a searchCity function for the search box, you can keep it or remove it
+window.searchCity = function() {
+  // Implement if needed; currently not required by the request
+};
