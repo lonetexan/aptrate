@@ -1,0 +1,73 @@
+/* style.css */
+body {
+  font-family: Arial, sans-serif;
+  margin: 0;
+  padding: 0;
+}
+
+nav {
+  background-color: #333;
+  padding: 10px;
+}
+
+nav ul {
+  list-style-type: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+}
+
+nav ul li {
+  margin-right: 10px;
+}
+
+nav ul li a {
+  color: white;
+  text-decoration: none;
+}
+
+.tab-content {
+  padding: 20px;
+}
+
+.hero-section {
+  text-align: center;
+  padding: 50px;
+  background-color: #f4f4f4;
+}
+
+button {
+  padding: 10px 20px;
+  background-color: #007BFF;
+  color: white;
+  border: none;
+  cursor: pointer;
+}
+
+button:hover {
+  background-color: #0056b3;
+}
+
+#map {
+  border: 1px solid #ccc;
+}
+
+#auth-form {
+  display: flex;
+  flex-direction: column;
+}
+
+#auth-form label {
+  margin-top: 10px;
+}
+
+#auth-form input {
+  margin-top: 5px;
+  padding: 10px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+}
+
+#auth-form button {
+  margin-top: 10px;
+}

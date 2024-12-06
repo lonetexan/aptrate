@@ -1,0 +1,99 @@
+Mistral AI logo
+Loading
+Mistral-large-2407
+Responding...
+Sure! Let's rebuild the entire website step by step.
+
+1. index.html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Apartment Finder - Austin</title>
+  <link rel="stylesheet" href="style.css"/>
+</head>
+<body>
+  <nav>
+    <ul>
+      <li><a href="#home" onclick="showTab('home')">Home</a></li>
+      <li><a href="#maps" onclick="showTab('maps')">Maps</a></li>
+      <li><a href="#ratings" onclick="showTab('ratings')">My Ratings</a></li>
+      <li><a href="#auth" onclick="showTab('auth')">Sign In</a></li>
+    </ul>
+  </nav>
+
+  <!-- Home Page -->
+  <div id="home" class="tab-content">
+    <div class="hero-section">
+      <h1>Welcome to Apartment Finder</h1>
+      <p>Find and rate apartments in Austin, TX.</p>
+      <button onclick="showTab('maps')">Explore Now</button>
+    </div>
+  </div>
+
+  <!-- Maps Page -->
+  <div id="maps" class="tab-content" style="display:none;">
+    <h1>Apartment Maps - Austin, TX</h1>
+    <input type="text" id="searchBox" placeholder="Search for a location">
+    <button onclick="searchLocation()">Search</button>
+    <div id="map" style="height: 500px; width: 100%; margin-top:10px;"></div>
+    <div id="apartmentsContainer">
+      <h2>Nearby Apartments</h2>
+      <ul id="apartmentsList"></ul>
+    </div>
+  </div>
+
+  <!-- User Ratings Page -->
+  <div id="ratings" class="tab-content" style="display:none;">
+    <h1>My Ratings</h1>
+    <table id="ratingsTable" border="1">
+      <thead>
+        <tr>
+          <th>Apartment Name</th>
+          <th>Luxury</th>
+          <th>Amenities</th>
+          <th>Distance (miles)</th>
+          <th>Final Rating</th>
+          <th>Rate</th>
+        </tr>
+      </thead>
+      <tbody>
+        <!-- Dynamically populated by JS -->
+      </tbody>
+    </table>
+  </div>
+
+  <!-- User Authentication Page -->
+  <div id="auth" class="tab-content" style="display:none;">
+    <h2>User Authentication</h2>
+    <form id="auth-form">
+      <label for="email">Email:</label>
+      <input type="email" id="email" required>
+      <label for="password">Password:</label>
+      <input type="password" id="password" required>
+      <button type="button" onclick="registerUser()">Sign Up</button>
+      <button type="button" onclick="loginUser()">Log In</button>
+      <button type="button" onclick="logoutUser()">Log Out</button>
+    </form>
+  </div>
+
+  <!-- Firebase SDKs -->
+  <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-auth.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-firestore.js"></script>
+
+  <!-- Google Maps API (with Places Library) -->
+  <script
+    async
+    defer
+    src="https://maps.googleapis.com/maps/api/js?key=AIzaSyAzp-k4z_v4_zAUbOj_52RyudNdsp__0lc&libraries=places&callback=initMap">
+  </script>
+
+  <!-- App Scripts -->
+  <script type="module" src="firebaseConfig.js"></script>
+  <script type="module" src="auth.js"></script>
+  <script src="main.js"></script>
+  <script type="module" src="map.js"></script>
+</body>
+</html>
