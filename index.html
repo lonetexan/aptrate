@@ -52,7 +52,6 @@
     <div class="container section-container">
       <h2 class="section-heading">Apartment Maps</h2>
       <div class="map-section">
-        <!-- You can remove the search functionality if not needed, or leave it -->
         <div class="map-controls">
           <input id="searchInput" type="text" placeholder="Search city or address..."/>
           <button class="primary-btn" onclick="searchCity()">Search</button>
@@ -78,6 +77,9 @@
               <th>Luxury</th>
               <th>Amenities</th>
               <th>Distance (miles)</th>
+              <th>Price</th>
+              <th>Sq Ft</th>
+              <th>Price / Sq Ft</th>
               <th>Final Rating</th>
             </tr>
           </thead>
@@ -86,6 +88,7 @@
           </tbody>
         </table>
       </div>
+      <button id="addRowBtn" class="primary-btn">Add Apartment</button>
     </div>
   </div>
 
@@ -109,24 +112,90 @@
     </div>
   </div>
 
-  <!-- Firebase SDKs -->
-  <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-app.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-auth.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-firestore.js"></script>
-
-  <!-- Your Firebase and Auth config as modules -->
+  <!-- Firebase Config and Auth as modules -->
   <script type="module" src="firebaseConfig.js"></script>
   <script type="module" src="auth.js"></script>
 
-  <!-- Main and Map scripts as regular scripts -->
+  <!-- Main and Map as regular scripts -->
   <script src="main.js"></script>
   <script src="map.js"></script>
 
-  <!-- Google Maps API (with Places Library) -->
+  <!-- Google Maps API -->
   <script
     async
     defer
     src="https://maps.googleapis.com/maps/api/js?key=AIzaSyAzp-k4z_v4_zAUbOj_52RyudNdsp__0lc&libraries=places&callback=initMap">
+  </script>
+
+  <!-- Spreadsheet-like functionality for the Ratings Page -->
+  <script>
+    const ratingsTableBody = document.getElementById('ratingsTable').querySelector('tbody');
+    const addRowBtn = document.getElementById('addRowBtn');
+
+    addRowBtn.addEventListener('click', addNewRow);
+
+    function addNewRow() {
+      const tr = document.createElement('tr');
+
+      // Apartment Name
+      tr.appendChild(createEditableCell(''));
+      // Luxury
+      tr.appendChild(createEditableCell('0'));
+      // Amenities
+      tr.appendChild(createEditableCell('0'));
+      // Distance (miles)
+      tr.appendChild(createEditableCell('0'));
+      // Price
+      tr.appendChild(createEditableCell('0'));
+      // Sq Ft
+      tr.appendChild(createEditableCell('0'));
+
+      // Price / Sq Ft (computed)
+      const pricePerSqFt = document.createElement('td');
+      pricePerSqFt.textContent = 'N/A';
+      tr.appendChild(pricePerSqFt);
+
+      // Final Rating (computed)
+      const finalRating = document.createElement('td');
+      finalRating.textContent = 'N/A';
+      tr.appendChild(finalRating);
+
+      ratingsTableBody.appendChild(tr);
+
+      // Add event listeners to update calculations on input change
+      const editableCells = tr.querySelectorAll('td[contenteditable="true"]');
+      editableCells.forEach(cell => {
+        cell.addEventListener('input', () => updateRowCalculations(tr));
+      });
+    }
+
+    function createEditableCell(initialValue) {
+      const td = document.createElement('td');
+      td.contentEditable = 'true';
+      td.textContent = initialValue;
+      return td;
+    }
+
+    function updateRowCalculations(row) {
+      const cells = row.querySelectorAll('td');
+      // Order: 0:Name, 1:Luxury, 2:Amenities, 3:Distance, 4:Price, 5:SqFt, 6:Price/SqFt, 7:FinalRating
+      const luxury = parseFloat(cells[1].textContent) || 0;
+      const amenities = parseFloat(cells[2].textContent) || 0;
+      const price = parseFloat(cells[4].textContent) || 0;
+      const sqFt = parseFloat(cells[5].textContent) || 0;
+
+      const finalRatingVal = (luxury + amenities) / 2;
+      let pricePerSqFtVal = 'N/A';
+      if (sqFt > 0) {
+        pricePerSqFtVal = (price / sqFt).toFixed(2);
+      }
+
+      cells[6].textContent = pricePerSqFtVal;
+      cells[7].textContent = isNaN(finalRatingVal) ? 'N/A' : finalRatingVal.toFixed(2);
+    }
+
+    // Add an initial row for demonstration
+    addNewRow();
   </script>
 </body>
 </html>
