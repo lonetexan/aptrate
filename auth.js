@@ -1,88 +1,54 @@
 // auth.js
-import { auth, db } from "./firebaseConfig.js";
-import {
-  createUserWithEmailAndPassword,
-  signInWithEmailAndPassword,
-  signOut,
-  onAuthStateChanged
-} from "https://www.gstatic.com/firebasejs/9.17.1/firebase-auth.js";
-import { collection, getDocs } from "https://www.gstatic.com/firebasejs/9.17.1/firebase-firestore.js";
+import { supabase } from './supabaseClient.js';
 
-window.registerUser = async () => {
-  const email = document.getElementById('email').value;
-  const password = document.getElementById('password').value;
+// Sign up new user
+window.signUpUser = async () => {
+  const email = document.getElementById('email').value.trim();
+  const password = document.getElementById('password').value.trim();
 
-  try {
-    const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-    alert("User registered successfully!");
-  } catch (error) {
-    alert("Registration failed: " + error.message);
+  if(!email || !password) {
+    alert("Please enter both email and password.");
+    return;
   }
-};
 
-window.loginUser = async () => {
-  const email = document.getElementById('email').value;
-  const password = document.getElementById('password').value;
-
-  try {
-    const userCredential = await signInWithEmailAndPassword(auth, email, password);
-    alert("Logged in successfully!");
-  } catch (error) {
-    alert("Login failed: " + error.message);
-  }
-};
-
-window.logoutUser = async () => {
-  try {
-    await signOut(auth);
-    alert("You have been logged out.");
-  } catch (error) {
-    alert("Logout failed: " + error.message);
-  }
-};
-
-async function loadUserApartments(uid) {
-  const ratingsTableBody = document.querySelector('#ratingsTable tbody');
-  ratingsTableBody.innerHTML = '';
-
-  const userApartmentsRef = collection(db, 'users', uid, 'apartments');
-  const querySnapshot = await getDocs(userApartmentsRef);
-
-  querySnapshot.forEach(doc => {
-    const data = doc.data();
-    const tr = document.createElement('tr');
-
-    const nameTd = document.createElement('td');
-    nameTd.textContent = data.name;
-
-    const luxuryTd = document.createElement('td');
-    luxuryTd.textContent = data.luxury ?? 'N/A';
-
-    const amenitiesTd = document.createElement('td');
-    amenitiesTd.textContent = data.amenities ?? 'N/A';
-
-    const distanceTd = document.createElement('td');
-    distanceTd.textContent = data.distanceMiles?.toFixed(2) ?? 'N/A';
-
-    const finalRatingTd = document.createElement('td');
-    finalRatingTd.textContent = data.finalRating ?? 'N/A';
-
-    tr.appendChild(nameTd);
-    tr.appendChild(luxuryTd);
-    tr.appendChild(amenitiesTd);
-    tr.appendChild(distanceTd);
-    tr.appendChild(finalRatingTd);
-
-    ratingsTableBody.appendChild(tr);
-  });
-}
-
-onAuthStateChanged(auth, (user) => {
-  window.currentUser = user; // Expose user globally
-  if (user) {
-    loadUserApartments(user.uid);
+  const { data, error } = await supabase.auth.signUp({ email, password });
+  if(error) {
+    alert("Sign up error: " + error.message);
   } else {
-    const ratingsTableBody = document.querySelector('#ratingsTable tbody');
-    ratingsTableBody.innerHTML = '';
+    alert("Sign up successful! Please check your email for confirmation.");
   }
+};
+
+// Login existing user
+window.loginUser = async () => {
+  const email = document.getElementById('email').value.trim();
+  const password = document.getElementById('password').value.trim();
+
+  if(!email || !password) {
+    alert("Please enter both email and password.");
+    return;
+  }
+
+  const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+  if(error) {
+    alert("Login error: " + error.message);
+  } else {
+    alert("Login successful!");
+  }
+};
+
+// Logout user
+window.logoutUser = async () => {
+  const { error } = await supabase.auth.signOut();
+  if(error) {
+    alert("Logout error: " + error.message);
+  } else {
+    alert("Logged out successfully");
+  }
+};
+
+// Monitor auth state
+supabase.auth.onAuthStateChange((event, session) => {
+  window.currentUser = session?.user || null;
+  console.log("Auth state changed:", event, window.currentUser);
 });

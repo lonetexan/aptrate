@@ -1,112 +1,207 @@
-// map.js
-let map;
-let placesService;
-let markers = [];
+import { supabase } from './supabaseClient.js'; // Make sure this import is at the top
 
-const austinLocation = { lat: 30.2672, lng: -97.7431 };
-const radiusInMeters = 16000; // about 10 miles
+// Remove or comment out local storage functions if not needed
+// If you want to keep them as a fallback, just don't call them.
 
-window.initMap = function() {
-  map = new google.maps.Map(document.getElementById("map"), {
-    center: austinLocation,
-    zoom: 13,
-  });
+// Instead of localStorage, we use Supabase:
+async function fetchSavedApartmentsFromSupabase() {
+  if (!window.currentUser) return [];
+  const { data, error } = await supabase
+    .from('saved_apartments')
+    .select('*')
+    .eq('user_id', window.currentUser.id);
 
-  placesService = new google.maps.places.PlacesService(map);
+  if (error) {
+    console.error("Error fetching saved apartments:", error);
+    return [];
+  }
+  return data;
+}
 
-  const request = {
-    location: austinLocation,
-    radius: radiusInMeters,
-    keyword: 'apartment OR condo'
-  };
+async function saveApartmentToSupabase(apartment) {
+  if (!window.currentUser) {
+    alert("You must be logged in to save apartments.");
+    return;
+  }
 
-  placesService.nearbySearch(request, (results, status) => {
-    if (status === google.maps.places.PlacesServiceStatus.OK && results.length > 0) {
-      displayApartments(results);
-    } else {
-      console.log("No apartments found in this area.");
-      clearApartmentsList();
+  const { data, error } = await supabase
+    .from('saved_apartments')
+    .upsert({
+      user_id: window.currentUser.id,
+      place_id: apartment.place_id,
+      name: apartment.name,
+      vicinity: apartment.vicinity,
+      website: apartment.website,
+      photo_url: apartment.photo,
+      rating: apartment.rating || 0
+    }, { onConflict: 'user_id,place_id' });
+
+  if (error) {
+    console.error("Error saving apartment:", error);
+    alert("Error saving apartment: " + error.message);
+  } else {
+    alert('Apartment saved!');
+  }
+}
+
+async function unsaveApartmentFromSupabase(place_id) {
+  if (!window.currentUser) {
+    alert("You must be logged in to remove saved apartments.");
+    return;
+  }
+
+  const { error } = await supabase
+    .from('saved_apartments')
+    .delete()
+    .eq('user_id', window.currentUser.id)
+    .eq('place_id', place_id);
+
+  if (error) {
+    console.error("Error removing apartment:", error);
+    alert("Error removing apartment: " + error.message);
+  }
+
+  displaySavedApartments(); // Refresh the list
+}
+
+async function updateApartmentRatingInSupabase(place_id, rating) {
+  if (!window.currentUser) {
+    alert("You must be logged in to rate apartments.");
+    return;
+  }
+
+  const { error } = await supabase
+    .from('saved_apartments')
+    .update({ rating })
+    .eq('user_id', window.currentUser.id)
+    .eq('place_id', place_id);
+
+  if (error) {
+    console.error("Error updating rating:", error);
+  }
+}
+
+// Modify addApartmentToList to use saveApartmentToSupabase instead of local save
+function addApartmentToList(details) {
+  const li = document.createElement('li');
+  li.className = 'apartment-item';
+
+  let photoHtml = '';
+  let photoUrl = '';
+  if (details.photos && details.photos.length > 0) {
+    photoUrl = details.photos[0].getUrl({ maxWidth: 200 });
+    photoHtml = `<img src="${photoUrl}" alt="${details.name}" />`;
+  }
+
+  let websiteHtml = '';
+  if (details.website) {
+    websiteHtml = `<a href="${details.website}" target="_blank">Visit Website</a><br>`;
+  }
+
+  li.innerHTML = `
+    <strong>${details.name}</strong><br>
+    ${details.vicinity || 'Address not available'}<br>
+    ${photoHtml}
+    ${websiteHtml}
+  `;
+
+  // Only show save button if user is logged in
+  if (window.currentUser) {
+    const saveBtn = document.createElement('button');
+    saveBtn.innerText = 'Save';
+    saveBtn.addEventListener('click', () => {
+      const apartmentData = {
+        place_id: details.place_id,
+        name: details.name,
+        vicinity: details.vicinity,
+        website: details.website || '',
+        photo: photoUrl,
+        rating: 0
+      };
+      saveApartmentToSupabase(apartmentData);
+    });
+    li.appendChild(saveBtn);
+  } else {
+    // If not logged in, show a prompt to log in
+    const loginPrompt = document.createElement('p');
+    loginPrompt.textContent = 'Log in to save this apartment.';
+    li.appendChild(loginPrompt);
+  }
+
+  apartmentsList.appendChild(li);
+}
+
+// Override displaySavedApartments to load from Supabase
+window.displaySavedApartments = async function() {
+  const savedList = document.getElementById('savedApartmentsList');
+  savedList.innerHTML = '';
+
+  if (!window.currentUser) {
+    savedList.innerHTML = '<p>Please log in to see your saved apartments.</p>';
+    return;
+  }
+
+  const savedApartments = await fetchSavedApartmentsFromSupabase();
+  if (savedApartments.length === 0) {
+    savedList.innerHTML = '<p>No saved apartments yet.</p>';
+    return;
+  }
+
+  savedApartments.forEach(apartment => {
+    const li = document.createElement('li');
+    li.className = 'saved-apartment-item';
+
+    let photoHtml = '';
+    if (apartment.photo_url) {
+      photoHtml = `<img src="${apartment.photo_url}" alt="${apartment.name}" />`;
     }
+
+    let websiteHtml = '';
+    if (apartment.website) {
+      websiteHtml = `<a href="${apartment.website}" target="_blank">Visit Website</a><br>`;
+    }
+
+    li.innerHTML = `
+      <strong>${apartment.name}</strong><br>
+      ${apartment.vicinity || 'Address not available'}<br>
+      ${photoHtml}
+      ${websiteHtml}
+    `;
+
+    // Rating stars
+    const ratingContainer = document.createElement('div');
+    ratingContainer.style.margin = '10px 0';
+
+    for (let i = 1; i <= 5; i++) {
+      const star = document.createElement('span');
+      star.innerText = '★';
+      star.style.cursor = 'pointer';
+      star.style.fontSize = '20px';
+      star.style.marginRight = '5px';
+      star.style.color = i <= (apartment.rating || 0) ? 'gold' : '#ccc';
+
+      star.addEventListener('mouseover', () => {
+        highlightStars(ratingContainer, i);
+      });
+      star.addEventListener('mouseout', () => {
+        highlightStars(ratingContainer, apartment.rating || 0);
+      });
+      star.addEventListener('click', () => {
+        updateApartmentRatingInSupabase(apartment.place_id, i);
+        apartment.rating = i;
+        highlightStars(ratingContainer, i);
+      });
+
+      ratingContainer.appendChild(star);
+    }
+
+    li.appendChild(ratingContainer);
+
+    const unsaveBtn = document.createElement('button');
+    unsaveBtn.innerText = 'Unsave';
+    unsaveBtn.addEventListener('click', () => unsaveApartmentFromSupabase(apartment.place_id));
+    li.appendChild(unsaveBtn);
+
+    savedList.appendChild(li);
   });
 };
-
-function displayApartments(apartments) {
-  clearApartmentsList();
-  clearMarkers();
-
-  const apartmentsList = document.getElementById('apartmentsList');
-  apartments.forEach((apartment) => {
-    const marker = new google.maps.Marker({
-      position: apartment.geometry.location,
-      map: map,
-      title: apartment.name
-    });
-    markers.push(marker);
-
-    const distanceMiles = distanceBetweenLocations(
-      austinLocation.lat, austinLocation.lng,
-      apartment.geometry.location.lat(), apartment.geometry.location.lng()
-    );
-
-    const li = document.createElement('li');
-    li.textContent = `${apartment.name} - ${distanceMiles.toFixed(2)} miles away`;
-    apartmentsList.appendChild(li);
-  });
-
-  // If user is logged in and db is available, you can save apartments
-  if (window.currentUser && window.db) {
-    saveApartmentsToUser(apartments);
-  }
-}
-
-function clearApartmentsList() {
-  const apartmentsList = document.getElementById('apartmentsList');
-  if (apartmentsList) {
-    apartmentsList.innerHTML = '';
-  }
-}
-
-function clearMarkers() {
-  for (const marker of markers) {
-    marker.setMap(null);
-  }
-  markers = [];
-}
-
-async function saveApartmentsToUser(apartments) {
-  const userId = window.currentUser.uid;
-  const userApartmentsRef = window.db.collection('users').doc(userId).collection('apartments');
-
-  for (const apartment of apartments) {
-    const distanceMiles = distanceBetweenLocations(
-      austinLocation.lat, austinLocation.lng,
-      apartment.geometry.location.lat(), apartment.geometry.location.lng()
-    );
-
-    await userApartmentsRef.doc(apartment.place_id).set({
-      name: apartment.name,
-      distanceMiles: distanceMiles,
-      luxury: 'N/A',
-      amenities: 'N/A',
-      finalRating: 'N/A'
-    });
-  }
-}
-
-function distanceBetweenLocations(lat1, lon1, lat2, lon2) {
-  const R = 3958.8;
-  const dLat = toRad(lat2 - lat1);
-  const dLon = toRad(lon2 - lon1);
-  const lat1Rad = toRad(lat1);
-  const lat2Rad = toRad(lat2);
-
-  const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
-            Math.sin(dLon/2) * Math.sin(dLon/2) *
-            Math.cos(lat1Rad) * Math.cos(lat2Rad);
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-  return R * c;
-}
-
-function toRad(value) {
-  return value * Math.PI / 180;
-}
